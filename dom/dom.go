@@ -196,7 +196,7 @@ func onWindowLoad(call func()){
 func OnWait(){
 	for {
 		if done == true {
-			Log("Cerando...")
+			Log("- Closing app ... bye")
 			os.Remove("./src/index.html")
 			return 
 		}
@@ -215,6 +215,33 @@ func isWindows(w *Window) bool {
 		}
 	}
 
+	return true
+}
+func isLinux(w *Window)bool{
+
+	user :=os.Getenv("LOGNAME")
+
+	if err := exec.Command("mkdir","/home/"+user+"/.profileFirefox").Run(); err != nil { fmt.Println("- Error create profile folder"," >> ",err) }else{ fmt.Println("- Create profile folder exited ! ") }
+	if err := exec.Command("firefox","-CreateProfile","app /home/"+user+"/.profileFirefox").Run(); err != nil{ fmt.Println("- Error createprofile in firefox >> ",err) }else{ fmt.Println("- Create profile firefox exited ! ") }
+	if err := exec.Command("mkdir","/home/"+user+"/.profileFirefox/chrome").Run(); err != nil { fmt.Println("- Error create chrome folder >> ",err) }else{ fmt.Println("- Create chrome floder exited !") }
+	file, err := os.Create("/home/"+user+"/.profileFirefox/chrome/userChrome.css")
+	if err != nil { fmt.Println("- Error create css file >> ",err) }else{ fmt.Println("- Create css file exited !") }
+	_, err = file.Write([]byte(`
+						@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+
+						#navigator-toolbox {
+							width:      0px; 
+							height:     0px;
+							opacity:    0  ;
+							overflow:   hidden;
+					}`))
+	if err != nil { fmt.Println("- Error write css file >> ",err) }else{ fmt.Println("- Write css file exited !") }
+
+	if err := exec.Command("firefox",fmt.Sprintf("%s", rootserv),"-p","app","--window-size="+fmt.Sprint(w.size.Width)+","+fmt.Sprint(w.size.Height),"--window-position="+fmt.Sprint(w.pos.PosX)+","+fmt.Sprint(w.pos.PosY)).Start(); err != nil{
+
+		fmt.Println("Command fail !!")
+		return false
+	}
 	return true
 }
 func js() string{
@@ -309,11 +336,17 @@ func New(content Component , w *Window){
 	contenido = app.OuterHtml
 	writeConten(contenido)
 
-	if runtime.GOOS == "windows" {
-		isWindows(w)
-	}
 	// start server and window
 	go newServer()
+	system := runtime.GOOS
+	fmt.Println("- We are in", system )
+	switch system {
+		case "windows":
+			isWindows(w)
+		case "linux":
+			isLinux(w)
+		case "mac":
+	}
 	go onWindowLoad(func(){
 		// ejecutar action de todos los componentes
 		content.Action()
@@ -428,7 +461,7 @@ func evalOptions(sms string){
 }
 func ok(){
 	conection = true
-	Log("conection is OK!")
+	Log("- Conection is exited !")
 }
 func close( sms string ){
 	done = true
